@@ -30,7 +30,7 @@ func (stream *Stream) WriteFloat32(val float32) {
 }
 
 // WriteFloat32Lossy write float32 to stream with ONLY 6 digits precision although much much faster
-func (stream *Stream) WriteFloat32Lossy(val float32) {
+func (stream *Stream) WriteFloat32Lossy(val float32, digit int) {
 	if math.IsInf(float64(val), 0) || math.IsNaN(float64(val)) {
 		stream.Error = fmt.Errorf("unsupported value: %f", val)
 		return
@@ -43,8 +43,8 @@ func (stream *Stream) WriteFloat32Lossy(val float32) {
 		stream.WriteFloat32(val)
 		return
 	}
-	precision := 6
-	exp := uint64(1000000) // 6
+	precision := digit
+	exp := uint64(math.Pow10(digit)) // 6
 	lval := uint64(float64(val)*float64(exp) + 0.5)
 	stream.WriteUint64(lval / exp)
 	fval := lval % exp
@@ -79,7 +79,7 @@ func (stream *Stream) WriteFloat64(val float64) {
 }
 
 // WriteFloat64Lossy write float64 to stream with ONLY 6 digits precision although much much faster
-func (stream *Stream) WriteFloat64Lossy(val float64) {
+func (stream *Stream) WriteFloat64Lossy(val float64, digit int) {
 	if math.IsInf(val, 0) || math.IsNaN(val) {
 		stream.Error = fmt.Errorf("unsupported value: %f", val)
 		return
@@ -92,8 +92,8 @@ func (stream *Stream) WriteFloat64Lossy(val float64) {
 		stream.WriteFloat64(val)
 		return
 	}
-	precision := 6
-	exp := uint64(1000000) // 6
+	precision := digit
+	exp := uint64(math.Pow10(digit)) // 6
 	lval := uint64(val*float64(exp) + 0.5)
 	stream.WriteUint64(lval / exp)
 	fval := lval % exp

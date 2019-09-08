@@ -16,6 +16,9 @@ import (
 type Config struct {
 	IndentionStep                 int
 	MarshalFloatWith6Digits       bool
+	MarshalFloatWith4Digits       bool
+	MarshalFloatWith3Digits       bool
+	MarshalFloatWith2Digits       bool
 	EscapeHTML                    bool
 	SortMapKeys                   bool
 	UseNumber                     bool
@@ -56,6 +59,34 @@ var ConfigCompatibleWithStandardLibrary = Config{
 	EscapeHTML:             true,
 	SortMapKeys:            true,
 	ValidateJsonRawMessage: true,
+}.Froze()
+
+var ConfigLowPrecision6 = Config{
+	EscapeHTML:              true,
+	SortMapKeys:             true,
+	ValidateJsonRawMessage:  true,
+	MarshalFloatWith6Digits: true,
+}.Froze()
+
+var ConfigLowPrecision4 = Config{
+	EscapeHTML:              true,
+	SortMapKeys:             true,
+	ValidateJsonRawMessage:  true,
+	MarshalFloatWith4Digits: true,
+}.Froze()
+
+var ConfigLowPrecision3 = Config{
+	EscapeHTML:              true,
+	SortMapKeys:             true,
+	ValidateJsonRawMessage:  true,
+	MarshalFloatWith3Digits: true,
+}.Froze()
+
+var ConfigLowPrecision2 = Config{
+	EscapeHTML:              true,
+	SortMapKeys:             true,
+	ValidateJsonRawMessage:  true,
+	MarshalFloatWith2Digits: true,
 }.Froze()
 
 // ConfigFastest marshals float with only 6 digits precision
@@ -148,9 +179,17 @@ func (cfg Config) Froze() API {
 	api.initCache()
 	encoderExtension := EncoderExtension{}
 	decoderExtension := DecoderExtension{}
+
 	if cfg.MarshalFloatWith6Digits {
-		api.marshalFloatWith6Digits(encoderExtension)
+		api.marshalFloatWithNDigits(encoderExtension, 6)
+	} else if cfg.MarshalFloatWith4Digits {
+		api.marshalFloatWithNDigits(encoderExtension, 4)
+	} else if cfg.MarshalFloatWith3Digits {
+		api.marshalFloatWithNDigits(encoderExtension, 3)
+	} else if cfg.MarshalFloatWith2Digits {
+		api.marshalFloatWithNDigits(encoderExtension, 2)
 	}
+
 	if cfg.EscapeHTML {
 		api.escapeHTML(encoderExtension)
 	}
@@ -226,10 +265,11 @@ func (cfg *frozenConfig) RegisterExtension(extension Extension) {
 }
 
 type lossyFloat32Encoder struct {
+	digit int
 }
 
 func (encoder *lossyFloat32Encoder) Encode(ptr unsafe.Pointer, stream *Stream) {
-	stream.WriteFloat32Lossy(*((*float32)(ptr)))
+	stream.WriteFloat32Lossy(*((*float32)(ptr)), encoder.digit)
 }
 
 func (encoder *lossyFloat32Encoder) IsEmpty(ptr unsafe.Pointer) bool {
@@ -237,10 +277,11 @@ func (encoder *lossyFloat32Encoder) IsEmpty(ptr unsafe.Pointer) bool {
 }
 
 type lossyFloat64Encoder struct {
+	digit int
 }
 
 func (encoder *lossyFloat64Encoder) Encode(ptr unsafe.Pointer, stream *Stream) {
-	stream.WriteFloat64Lossy(*((*float64)(ptr)))
+	stream.WriteFloat64Lossy(*((*float64)(ptr)), encoder.digit)
 }
 
 func (encoder *lossyFloat64Encoder) IsEmpty(ptr unsafe.Pointer) bool {
@@ -249,10 +290,10 @@ func (encoder *lossyFloat64Encoder) IsEmpty(ptr unsafe.Pointer) bool {
 
 // EnableLossyFloatMarshalling keeps 10**(-6) precision
 // for float variables for better performance.
-func (cfg *frozenConfig) marshalFloatWith6Digits(extension EncoderExtension) {
+func (cfg *frozenConfig) marshalFloatWithNDigits(extension EncoderExtension, digit int) {
 	// for better performance
-	extension[reflect2.TypeOfPtr((*float32)(nil)).Elem()] = &lossyFloat32Encoder{}
-	extension[reflect2.TypeOfPtr((*float64)(nil)).Elem()] = &lossyFloat64Encoder{}
+	extension[reflect2.TypeOfPtr((*float32)(nil)).Elem()] = &lossyFloat32Encoder{digit: digit}
+	extension[reflect2.TypeOfPtr((*float64)(nil)).Elem()] = &lossyFloat64Encoder{digit: digit}
 }
 
 type htmlEscapedStringEncoder struct {
